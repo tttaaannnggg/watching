@@ -1,6 +1,7 @@
 "use strict";
 
 (() => {
+  const SEG_MIN = 2; // px, narrowest segment before a bar wraps
   const main = document.getElementById("shows");
   const footer = document.getElementById("footer");
   const tip = document.getElementById("tip");
@@ -64,25 +65,40 @@
     bar.setAttribute("aria-label", label);
     bar.tabIndex = 0;
 
-    const currentIndex = show.current ? show.current.index : -1;
+    const multi = show.seasons.length > 1;
+    let minWidth = (show.seasons.length - 1) * 6;
     const episodes = [];
+
     for (const season of show.seasons) {
-      const lab = el("div", "season-label", seasonShort(season));
-      lab.title = seasonLong(season);
-      lab.setAttribute("aria-hidden", "true");
-      const cells = el("div", "cells");
-      cells.setAttribute("aria-hidden", "true");
+      const n = season.episodes.length;
+      const group = el("div", "season");
+      group.style.flex = `${n} 1 0`;
+      if (multi) {
+        const lab = el("div", "season-label", seasonShort(season));
+        lab.dataset.short = seasonShort(season);
+        lab.dataset.long = seasonLong(season);
+        lab.title = season.name || seasonShort(season);
+        lab.setAttribute("aria-hidden", "true");
+        group.append(lab);
+      }
+      const segs = el("div", "segs");
+      segs.setAttribute("aria-hidden", "true");
       for (const ep of season.episodes) {
         const seg = el("div", `seg ${ep.state}`);
         if (ep.state === "in_progress") seg.style.setProperty("--pct", `${ep.pct}%`);
-        if (episodes.length === currentIndex) seg.classList.add("current");
         seg.dataset.i = episodes.length;
+        if (show.current && show.current.index === episodes.length) seg.classList.add("current");
         episodes.push(ep);
-        cells.append(seg);
+        segs.append(seg);
       }
-      bar.append(lab, cells);
+      group.append(segs);
+      bar.append(group);
+      minWidth += n * SEG_MIN + (n - 1);
     }
+
     bar._episodes = episodes;
+    bar._minWidth = minWidth;
+    bar._multi = multi;
     return bar;
   }
 
@@ -99,9 +115,12 @@
     card.append(h);
 
     const meta = el("p", "meta");
-    const pos = el("span", "pos", position(show));
-    meta.append(pos);
-    if (show.current && show.current.title) meta.append(el("span", "ep-title", show.current.title));
+    const now = el("span", "now");
+    now.append(el("span", "pos", position(show)));
+    if (show.current && show.current.title) {
+      now.append(el("span", "sep", "·"), el("span", "ep-title", show.current.title));
+    }
+    meta.append(now);
     if (show.last_activity) {
       const t = el("time", "when", `updated ${relative(show.last_activity)}`);
       t.dateTime = show.last_activity;
@@ -110,6 +129,20 @@
     }
     card.append(meta, renderBar(show));
     return card;
+  }
+
+  // Switch a bar between one proportional row and wrapped per-season blocks.
+  function layout(bar) {
+    const wrap = bar.clientWidth > 0 && bar.clientWidth < bar._minWidth;
+    if (wrap === bar.classList.contains("wrap")) return;
+    bar.classList.toggle("wrap", wrap);
+    for (const lab of bar.querySelectorAll(".season-label")) {
+      lab.textContent = wrap ? lab.dataset.long : lab.dataset.short;
+    }
+  }
+
+  function layoutAll() {
+    for (const bar of main.querySelectorAll(".bar")) layout(bar);
   }
 
   // ------------------------------------------------------------ tooltip
@@ -227,7 +260,14 @@
     } else {
       main.replaceChildren(...series.map(renderCard));
       for (const bar of main.querySelectorAll(".bar")) wire(bar);
-      window.addEventListener("resize", hide);
+      layoutAll();
+      let width = main.clientWidth;
+      new ResizeObserver(() => {
+        if (main.clientWidth === width) return;
+        width = main.clientWidth;
+        hide();
+        layoutAll();
+      }).observe(main);
     }
 
     footer.replaceChildren(document.createTextNode("synced from Jellyfin"));

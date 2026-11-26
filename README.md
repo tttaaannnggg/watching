@@ -3,11 +3,12 @@
 What Mari is watching, synced from Jellyfin. Served at [watching.fujo.dev](https://watching.fujo.dev)
 by GitHub Pages.
 
-Each show is a card with an episode grid: one row per season (S1, S2… on the left), one small
-square per episode that wraps within the row. Watched squares are filled, the in-progress one fills
-from the bottom up to its playback percentage, and the current episode is ringed. The card header
-shows where you are: `S06E10 · 88%`, `Next: S01E08`, or `Finished`. Tap or hover a square (or focus
-the grid and use ←/→) for `S01E07 · Title · watched/52%/unwatched`.
+Each show is a card with a segmented progress bar: one segment per episode, a wider gap between
+seasons (labelled S1, S2…), watched segments filled, the in-progress one filled up to its playback
+percentage. Very long shows wrap onto several rows instead of overflowing. Above the bar is where
+you are (`S06E10 · 88% · Title`, `Next: S01E08`, or `Finished`); a small dot marks that episode's
+segment. Tap or hover a segment (or focus the bar and use ←/→) for
+`S01E07 · Title · watched/52%/unwatched`.
 
 ## Layout
 

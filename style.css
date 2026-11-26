@@ -8,6 +8,9 @@
   --partial: #b7791f;
   --track: #e2ded6;
   --focus: #2f6f5e;
+  --seg-gap: 1px;
+  --season-gap: 6px;
+  --seg-h: 14px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -86,63 +89,72 @@ header.site .sub {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  column-gap: 0.6em;
-  margin: 0.15rem 0 0.75rem;
+  column-gap: 0.8em;
+  margin: 0.15rem 0 0.7rem;
   color: var(--muted);
   font-size: 0.875rem;
   font-variant-numeric: tabular-nums;
   min-width: 0;
 }
 
-.meta .pos { color: var(--text); font-weight: 560; }
-
-.meta .ep-title {
-  flex: 1 1 8rem;
+/* "S06E10 · 88% · Title" stays on one line; the title ellipsizes. */
+.meta .now {
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.meta .pos { color: var(--text); font-weight: 560; }
+
+.meta .sep { margin: 0 0.4em; }
+
+/* Sits after the title on wide cards; wraps and right-aligns on narrow ones. */
 .meta .when { margin-left: auto; white-space: nowrap; }
 
-/* ---- episode grid: one row per season, squares wrap within the row ---- */
+/* ---- segmented bar ---- */
 
 .bar {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 0.6rem;
-  row-gap: 6px;
-  align-items: start;
+  display: flex;
+  gap: var(--season-gap);
+  width: 100%;
+  padding-bottom: 7px; /* room for the current-episode dot */
   touch-action: pan-y;
   cursor: default;
   border-radius: 4px;
-  outline-offset: 4px;
+  outline-offset: 3px;
 }
 
 .bar:focus-visible { outline: 2px solid var(--focus); }
 
-.season-label {
-  font-size: 0.72rem;
-  line-height: 12px;
-  color: var(--muted);
-  white-space: nowrap;
-  text-align: right;
-  min-width: 1.4rem;
-  font-variant-numeric: tabular-nums;
+.season {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.cells {
+.season-label {
+  font-size: 0.7rem;
+  line-height: 1.25;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.segs {
   display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  min-width: 0;
+  gap: var(--seg-gap);
+  height: var(--seg-h);
 }
 
 .seg {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 2px;
   background: var(--track);
 }
 
@@ -152,12 +164,46 @@ header.site .sub {
   background: linear-gradient(to top, var(--partial) var(--pct), var(--track) var(--pct));
 }
 
-.seg.current { box-shadow: 0 0 0 1.5px var(--card), 0 0 0 3px var(--text); }
+/* Current episode: a small dot under its segment, findable even at 2px wide. */
+.seg.current { position: relative; }
+
+.seg.current::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 3px);
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--text);
+}
+
+.bar.wrap .seg.current { outline: 1px solid var(--text); outline-offset: 1px; }
+.bar.wrap .seg.current::after { content: none; }
 
 .seg.active {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+  position: relative;
+  z-index: 1;
 }
+
+/* Long shows: each season becomes a block of fixed-width cells that wraps onto rows. */
+.bar.wrap {
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bar.wrap .segs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5px, 1fr));
+  grid-auto-rows: 10px;
+  height: auto;
+  row-gap: 3px;
+}
+
+.bar.wrap .seg { border-radius: 1.5px; }
 
 /* ---- tooltip ---- */
 
