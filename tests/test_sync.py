@@ -121,6 +121,43 @@ class BuildSeriesTest(unittest.TestCase):
         self.assertEqual([e["e"] for e in b["episodes"]], [2, 6, None])
 
 
+class CurrentEpisodeTest(unittest.TestCase):
+    def current(self, eps):
+        out = sync.build_series(series("Show"), [season("s1", 1), season("s2", 2)], eps, CONFIG)
+        return out["current"]
+
+    def test_recent_in_progress_is_current(self):
+        cur = self.current([
+            episode("s1", 1, 1, "One", played=True, last="2026-11-01T00:00:00Z"),
+            episode("s1", 1, 2, "Two", ticks=5, pct=88.0, last="2026-11-24T00:00:00Z"),
+            episode("s1", 1, 3, "Three"),
+        ])
+        self.assertEqual((cur["s"], cur["e"], cur["state"], cur["pct"], cur["index"]), (1, 2, "in_progress", 88, 1))
+
+    def test_next_unwatched_after_most_recent_watch(self):
+        # The stale in-progress S01E02 is not current: the latest activity was S01E06, and the
+        # first not-yet-watched episode after it is S02E01.
+        cur = self.current([
+            episode("s1", 1, 1, "One", played=True, last="2026-11-01T00:00:00Z"),
+            episode("s1", 1, 2, "Two", ticks=5, pct=30.0, last="2026-11-02T00:00:00Z"),
+            episode("s1", 1, 6, "Six", played=True, last="2026-11-20T00:00:00Z"),
+            episode("s1", 1, 7, "Seven", played=True),
+            episode("s2", 2, 1, "Next"),
+        ])
+        self.assertEqual((cur["s"], cur["e"], cur["title"], cur["state"]), (2, 1, "Next", "unwatched"))
+
+    def test_wraps_to_earlier_gap_then_finished(self):
+        cur = self.current([
+            episode("s1", 1, 1, "One"),
+            episode("s1", 1, 2, "Two", played=True, last="2026-11-20T00:00:00Z"),
+        ])
+        self.assertEqual(cur["e"], 1)
+        self.assertIsNone(self.current([
+            episode("s1", 1, 1, "One", played=True, last="2026-11-01T00:00:00Z"),
+            episode("s1", 1, 2, "Two", played=True, last="2026-11-20T00:00:00Z"),
+        ]))
+
+
 class SnapshotTest(unittest.TestCase):
     def test_sorted_by_activity_desc_then_name(self):
         entries = [

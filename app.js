@@ -1,7 +1,6 @@
 "use strict";
 
 (() => {
-  const SEG_MIN = 2; // px, narrowest segment before a bar wraps
   const main = document.getElementById("shows");
   const footer = document.getElementById("footer");
   const tip = document.getElementById("tip");
@@ -65,40 +64,32 @@
     bar.setAttribute("aria-label", label);
     bar.tabIndex = 0;
 
-    const multi = show.seasons.length > 1;
-    let minWidth = (show.seasons.length - 1) * 6;
+    const currentIndex = show.current ? show.current.index : -1;
     const episodes = [];
-
     for (const season of show.seasons) {
-      const n = season.episodes.length;
-      const group = el("div", "season");
-      group.style.flex = `${n} 1 0`;
-      if (multi) {
-        const lab = el("div", "season-label", seasonShort(season));
-        lab.dataset.short = seasonShort(season);
-        lab.dataset.long = seasonLong(season);
-        lab.title = season.name || seasonShort(season);
-        lab.setAttribute("aria-hidden", "true");
-        group.append(lab);
-      }
-      const segs = el("div", "segs");
-      segs.setAttribute("aria-hidden", "true");
+      const lab = el("div", "season-label", seasonShort(season));
+      lab.title = seasonLong(season);
+      lab.setAttribute("aria-hidden", "true");
+      const cells = el("div", "cells");
+      cells.setAttribute("aria-hidden", "true");
       for (const ep of season.episodes) {
         const seg = el("div", `seg ${ep.state}`);
         if (ep.state === "in_progress") seg.style.setProperty("--pct", `${ep.pct}%`);
+        if (episodes.length === currentIndex) seg.classList.add("current");
         seg.dataset.i = episodes.length;
         episodes.push(ep);
-        segs.append(seg);
+        cells.append(seg);
       }
-      group.append(segs);
-      bar.append(group);
-      minWidth += n * SEG_MIN + (n - 1);
+      bar.append(lab, cells);
     }
-
     bar._episodes = episodes;
-    bar._minWidth = minWidth;
-    bar._multi = multi;
     return bar;
+  }
+
+  function position(show) {
+    const cur = show.current;
+    if (!cur) return show.watched === show.total ? "Finished" : "";
+    return cur.state === "in_progress" ? `${code(cur)} · ${cur.pct}%` : `Next: ${code(cur)}`;
   }
 
   function renderCard(show) {
@@ -108,30 +99,17 @@
     card.append(h);
 
     const meta = el("p", "meta");
-    meta.append(el("span", null, `${show.watched} / ${show.total} episodes`));
+    const pos = el("span", "pos", position(show));
+    meta.append(pos);
+    if (show.current && show.current.title) meta.append(el("span", "ep-title", show.current.title));
     if (show.last_activity) {
-      meta.append(el("span", "sep", "·"));
-      const t = el("time", null, `updated ${relative(show.last_activity)}`);
+      const t = el("time", "when", `updated ${relative(show.last_activity)}`);
       t.dateTime = show.last_activity;
       t.title = fullDate.format(new Date(show.last_activity));
       meta.append(t);
     }
     card.append(meta, renderBar(show));
     return card;
-  }
-
-  // Switch a bar between one proportional row and wrapped per-season blocks.
-  function layout(bar) {
-    const wrap = bar.clientWidth > 0 && bar.clientWidth < bar._minWidth;
-    if (wrap === bar.classList.contains("wrap")) return;
-    bar.classList.toggle("wrap", wrap);
-    for (const lab of bar.querySelectorAll(".season-label")) {
-      lab.textContent = wrap ? lab.dataset.long : lab.dataset.short;
-    }
-  }
-
-  function layoutAll() {
-    for (const bar of main.querySelectorAll(".bar")) layout(bar);
   }
 
   // ------------------------------------------------------------ tooltip
@@ -249,14 +227,7 @@
     } else {
       main.replaceChildren(...series.map(renderCard));
       for (const bar of main.querySelectorAll(".bar")) wire(bar);
-      layoutAll();
-      let width = main.clientWidth;
-      new ResizeObserver(() => {
-        if (main.clientWidth === width) return;
-        width = main.clientWidth;
-        hide();
-        layoutAll();
-      }).observe(main);
+      window.addEventListener("resize", hide);
     }
 
     footer.replaceChildren(document.createTextNode("synced from Jellyfin"));

@@ -190,6 +190,7 @@ def build_series(series, seasons, episodes, config):
     out_seasons = []
     watched = in_progress = total = 0
     last_activity = None
+    flat = []  # (played_at, episode dict) in display order
     for group in sorted(groups.values(), key=lambda g: (g["number"] == 0, g["number"])):
         items = group["items"]
         numbered = sorted(
@@ -222,6 +223,7 @@ def build_series(series, seasons, episodes, config):
                     "pct": pct,
                 }
             )
+            flat.append((played_at, out_eps[-1]))
         out_seasons.append({"number": group["number"], "name": group["name"], "episodes": out_eps})
 
     if total == 0:
@@ -237,8 +239,28 @@ def build_series(series, seasons, episodes, config):
         "last_activity": last_activity,
         "watched": watched,
         "total": total,
+        "current": current_episode(flat),
         "seasons": out_seasons,
     }
+
+
+def current_episode(flat):
+    """Where the viewer is: the most recently played episode if still in progress, else the
+    next not-yet-watched episode after it (wrapping to the first one), else None (finished).
+    Returned dict adds `index`, the episode's position in display order."""
+    if not flat:
+        return None
+    played = [(at, i) for i, (at, _) in enumerate(flat) if at]
+    start = 0
+    if played:
+        last = max(played)[1]
+        if flat[last][1]["state"] == "in_progress":
+            return {**flat[last][1], "index": last}
+        start = last + 1
+    for i in list(range(start, len(flat))) + list(range(0, start)):
+        if flat[i][1]["state"] != "watched":
+            return {**flat[i][1], "index": i}
+    return None
 
 
 def sort_series(series_list):
