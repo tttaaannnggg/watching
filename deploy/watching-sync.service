@@ -1,0 +1,9 @@
+[Unit]
+Description=Sync Jellyfin watch progress to watching.fujo.dev
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/dev/watching
+ExecStart=/usr/bin/env python3 %h/dev/watching/sync.py --push
