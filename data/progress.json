@@ -1,0 +1,819 @@
+{
+ "generated": "2026-11-26T23:42:57Z",
+ "series": [
+  {
+   "name": "JoJo's Bizarre Adventure",
+   "year": 2012,
+   "tmdb": "45790",
+   "last_activity": "2026-11-24T06:00:17Z",
+   "watched": 3,
+   "total": 4,
+   "seasons": [
+    {
+     "number": 6,
+     "name": "Season 6",
+     "episodes": [
+      {
+       "s": 6,
+       "e": 7,
+       "title": "Tusk (1)",
+       "state": "watched",
+       "pct": 100
+      },
+      {
+       "s": 6,
+       "e": 8,
+       "title": "Tusk (2)",
+       "state": "watched",
+       "pct": 100
+      },
+      {
+       "s": 6,
+       "e": 9,
+       "title": "Scary Monsters (1)",
+       "state": "watched",
+       "pct": 100
+      },
+      {
+       "s": 6,
+       "e": 10,
+       "title": "Scary Monsters (2)",
+       "state": "in_progress",
+       "pct": 88
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Romance of the Three Kingdoms",
+   "year": 1994,
+   "tmdb": "72645",
+   "last_activity": "2026-11-24T01:05:20Z",
+   "watched": 2,
+   "total": 84,
+   "seasons": [
+    {
+     "number": 1,
+     "name": "Act 1 - Deer-Hunt of Heroes",
+     "episodes": [
+      {
+       "s": 1,
+       "e": 1,
+       "title": "Oath of the Peach Garden",
+       "state": "watched",
+       "pct": 100
+      },
+      {
+       "s": 1,
+       "e": 2,
+       "title": "The Crisis of Ten Attendants",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 3,
+       "title": "Dong Zhuo Domineers the Capital",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 4,
+       "title": "Mengde Presents a Blade",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 5,
+       "title": "Three Heroes Duel Lü Bu",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 6,
+       "title": "The Chain-Link Strategem",
+       "state": "watched",
+       "pct": 100
+      },
+      {
+       "s": 1,
+       "e": 7,
+       "title": "Fengyi Pavilion",
+       "state": "in_progress",
+       "pct": 52
+      },
+      {
+       "s": 1,
+       "e": 8,
+       "title": "Thrice Offering of Xu Province",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 9,
+       "title": "Sun Ce's Founding",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 10,
+       "title": "Arrow Through the Halberd",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 11,
+       "title": "Battle of Wancheng",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 12,
+       "title": "White Gate Tower (Part 1)",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 13,
+       "title": "White Gate Tower (Part 2)",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 14,
+       "title": "Discussing Heroes Over Wine",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 15,
+       "title": "Yuan and Cao Raise Troops",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 16,
+       "title": "Guan Yu's Three Terms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 17,
+       "title": "Hanging the Seal and Locking the Gold",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 18,
+       "title": "Lone Journey of a Thousand Miles",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 19,
+       "title": "Reunion in an Old City",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 20,
+       "title": "Death of Sun Ce",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 21,
+       "title": "Battle of Guandu (Part 1)",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 22,
+       "title": "Battle of Guandu (Part 2)",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 23,
+       "title": "Fall of Yuan Shao",
+       "state": "unwatched",
+       "pct": 0
+      }
+     ]
+    },
+    {
+     "number": 2,
+     "name": "Act 2 - The Battle of Red Cliffs",
+     "episodes": [
+      {
+       "s": 2,
+       "e": 2,
+       "title": "Liu Bei Seeks the Virtuous",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": 6,
+       "title": "Refugees Cross the River",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": 11,
+       "title": "Thatched Boats Borrowing Arrows",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": 15,
+       "title": "Sir Zhuge Prays for Winds",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": 19,
+       "title": "The Beauty Trap",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": 22,
+       "title": "Angering Zhou Yu Thrice",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 2,
+       "e": null,
+       "title": "Romance of the Three Kingdoms",
+       "state": "unwatched",
+       "pct": 0
+      }
+     ]
+    },
+    {
+     "number": 3,
+     "name": "Act 3 - Rise of the Three Kingdoms",
+     "episodes": [
+      {
+       "s": 3,
+       "e": 1,
+       "title": "Zhang Song Presents a Map",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 2,
+       "title": "Liu Bei Enters the Riverlands",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 3,
+       "title": "Fledgling Phoenix Falls",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 4,
+       "title": "Righteous Release of Yan Yan",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 5,
+       "title": "The Seizure of the Western Riverlands",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 6,
+       "title": "Lone Blade Meeting",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 7,
+       "title": "The Battle of Hefei",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 8,
+       "title": "The Struggle for Succession",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 9,
+       "title": "Mount Dingjun",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 10,
+       "title": "Taking Hanzhong by Wit",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 11,
+       "title": "The Drowning of the Seven Armies",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 12,
+       "title": "The Retreat to Maicheng",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 13,
+       "title": "The Death of Cao Cao",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 14,
+       "title": "Cao Pi Usurps the Han",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 15,
+       "title": "Rallying Against Wu",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 16,
+       "title": "The Burning of the Linked Camps",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 3,
+       "e": 17,
+       "title": "Pacifying the Five Forces",
+       "state": "unwatched",
+       "pct": 0
+      }
+     ]
+    },
+    {
+     "number": 4,
+     "name": "Act 4 - Battles in the North and South",
+     "episodes": [
+      {
+       "s": 4,
+       "e": 1,
+       "title": "Crossing the Lu River",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 4,
+       "e": 2,
+       "title": "Path Sought in Dire Straits",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 4,
+       "e": 3,
+       "title": "Seven Capturings of Meng Huo",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 4,
+       "e": 4,
+       "title": "The Northern Expedition",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 4,
+       "e": 5,
+       "title": "Winning Over Jiang Wei",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 4,
+       "e": 6,
+       "title": "Return of the Sima Clan",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 4,
+       "e": 7,
+       "title": "The Empty Fort Strategy",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 4,
+       "e": 8,
+       "title": "Sima Yi Takes Command",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 4,
+       "e": 9,
+       "title": "A Battle of Wits Around Mount Qi",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 4,
+       "e": 10,
+       "title": "Zhuge Posing as a God",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 4,
+       "e": 11,
+       "title": "The Sixth Campaign From Mount Qi",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 4,
+       "e": 12,
+       "title": "The Extinguishing of Shangfang Valley",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 4,
+       "e": 13,
+       "title": "Autumn Wind Over Wuzhang Plain",
+       "state": "unwatched",
+       "pct": 0
+      }
+     ]
+    },
+    {
+     "number": 5,
+     "name": "Act 5 - Three Divided Unite as One",
+     "episodes": [
+      {
+       "s": 5,
+       "e": 1,
+       "title": "Feigning Illness to Fool Cao Shuang",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 5,
+       "e": 2,
+       "title": "Conflicts in the Wu Palace",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 5,
+       "e": 3,
+       "title": "Besieged at Mount Tielong",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 5,
+       "e": 4,
+       "title": "Sima Zhao Commits Regicide",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 5,
+       "e": 5,
+       "title": "Nine Campaigns on the Central Plains",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 5,
+       "e": 6,
+       "title": "Sneaking Through Yinping",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 5,
+       "e": 7,
+       "title": "Three Divided United by Jin",
+       "state": "unwatched",
+       "pct": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Three Kingdoms for an Amazing Reason",
+   "year": 2026,
+   "tmdb": null,
+   "last_activity": "2026-11-23T22:40:04Z",
+   "watched": 8,
+   "total": 18,
+   "seasons": [
+    {
+     "number": 1,
+     "name": "Full Recaps",
+     "episodes": [
+      {
+       "s": 1,
+       "e": 1,
+       "title": "S01E011 - 1-01-1 - The Millstone Challenge",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 2,
+       "title": "S01E012 - 1-01-2 - The Oath of Brotherhood",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 3,
+       "title": "S01E013 - 1-01-3 - The Honest Official's Resignation",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 4,
+       "title": "S01E021 - 1-02-1 - Eunuchs Beg for Mercy",
+       "state": "watched",
+       "pct": 100
+      },
+      {
+       "s": 1,
+       "e": 5,
+       "title": "S01E022 - 1-02-2 - Poisoned Wine",
+       "state": "watched",
+       "pct": 100
+      },
+      {
+       "s": 1,
+       "e": 6,
+       "title": "S01E023 - 1-02-3 - The Palace Trap",
+       "state": "watched",
+       "pct": 100
+      },
+      {
+       "s": 1,
+       "e": 7,
+       "title": "S01E031 - 1-03-1 - The Usurpation Proposal",
+       "state": "watched",
+       "pct": 100
+      },
+      {
+       "s": 1,
+       "e": 8,
+       "title": "S01E032 - 1-03-2 - The Betrayal",
+       "state": "watched",
+       "pct": 100
+      },
+      {
+       "s": 1,
+       "e": 9,
+       "title": "S01E033 - 1-03-3 - The Failed Assassination and the Deposition",
+       "state": "watched",
+       "pct": 100
+      },
+      {
+       "s": 1,
+       "e": 10,
+       "title": "S01E041 - 1-04-1 - The Oath to Kill the Tyrant",
+       "state": "watched",
+       "pct": 100
+      },
+      {
+       "s": 1,
+       "e": 11,
+       "title": "S01E042 - 1-04-2 - The Failed Assassination",
+       "state": "watched",
+       "pct": 100
+      },
+      {
+       "s": 1,
+       "e": 12,
+       "title": "S01E043 - 1-04-3 - The Mistaken Slaughter",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 13,
+       "title": "S01E051 - 1-05-1 - The Lowly Warrior Steps Forward",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 14,
+       "title": "S01E052 - 1-05-2 - The Unmatched Warrior",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 15,
+       "title": "S01E053 - 1-05-3 - A Swift Execution Mends a Deadly Rift",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 16,
+       "title": "S01E061 - 1-06-1 - Discovery of the Imperial Seal",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 17,
+       "title": "S01E062 - 1-06-2 - The Tyrant's Feast",
+       "state": "unwatched",
+       "pct": 0
+      },
+      {
+       "s": 1,
+       "e": 18,
+       "title": "S01E063 - 1-06-3 - The Dance Performance",
+       "state": "unwatched",
+       "pct": 0
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
