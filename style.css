@@ -158,9 +158,6 @@ header.site .sub {
 
 .seg.watched { background: var(--fill); }
 
-.seg.in_progress {
-  background: linear-gradient(to top, var(--fill) var(--pct), var(--track) var(--pct));
-}
 
 /* Current episode: a small dot under its segment, findable even at 2px wide. */
 .seg.current { position: relative; }

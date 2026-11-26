@@ -40,7 +40,7 @@
 
   function stateText(ep) {
     if (ep.state === "watched") return "watched";
-    if (ep.state === "in_progress") return `${ep.pct}%`;
+    if (ep.state === "in_progress") return "watching";
     return "unwatched";
   }
 
@@ -85,7 +85,6 @@
       segs.setAttribute("aria-hidden", "true");
       for (const ep of season.episodes) {
         const seg = el("div", `seg ${ep.state}`);
-        if (ep.state === "in_progress") seg.style.setProperty("--pct", `${ep.pct}%`);
         seg.dataset.i = episodes.length;
         if (show.current && show.current.index === episodes.length) seg.classList.add("current");
         episodes.push(ep);
@@ -105,7 +104,7 @@
   function position(show) {
     const cur = show.current;
     if (!cur) return show.watched === show.total ? "Finished" : "";
-    return cur.state === "in_progress" ? `${code(cur)} · ${cur.pct}%` : `Next: ${code(cur)}`;
+    return cur.state === "in_progress" ? code(cur) : `Next: ${code(cur)}`;
   }
 
   function renderCard(show) {
