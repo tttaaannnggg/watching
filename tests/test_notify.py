@@ -44,9 +44,11 @@ class FakeSender:
     def __init__(self, ok=True):
         self.ok = ok
         self.sent = []
+        self.roles = []
 
-    def __call__(self, content):
+    def __call__(self, content, role=None):
         self.sent.append(content)
+        self.roles.append(role)
         return self.ok
 
 
@@ -58,12 +60,12 @@ class RunTest(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def run_notify(self, entries, sender="fake", dry_run=False, **config):
+    def run_notify(self, entries, sender="fake", dry_run=False, roles=None, **config):
         snap, cfg = snapshot(entries, **config)
         sender = FakeSender() if sender == "fake" else sender
         out = io.StringIO()
         with redirect_stdout(out), redirect_stderr(io.StringIO()):
-            notify.run(snap, cfg, self.path, sender, dry_run=dry_run, sleep=lambda s: None)
+            notify.run(snap, cfg, self.path, sender, dry_run=dry_run, sleep=lambda s: None, roles=roles)
         return sender, out.getvalue()
 
     def seed(self, entries):
@@ -182,6 +184,59 @@ class RunTest(unittest.TestCase):
         self.seed([entry("No Tmdb", None, [(1, "a", True)])])
         self.assertEqual(self.announced(), {"name:no tmdb|1|1"})
 
+    def test_show_with_role_pings_it(self):
+        self.seed([entry("Pinged", "1", [(1, "a", False)]), entry("Quiet", None, [(1, "b", False)])])
+        sender, _ = self.run_notify(
+            [entry("Pinged", "1", [(1, "a", True)]), entry("Quiet", None, [(1, "b", True)])],
+            roles={"tmdb:1": "111", "name:other": "222"},
+        )
+        self.assertCountEqual(
+            zip(sender.sent, sender.roles),
+            [
+                ("Mari watched **Pinged** S01E01 · a <@&111>" + LINK, "111"),
+                ("Mari watched **Quiet** S01E01 · b" + LINK, None),
+            ],
+        )
+
+    def test_bulk_summary_pings_nobody(self):
+        self.seed([entry("A", "1", [(e, "t", False) for e in range(1, 20)])])
+        sender, _ = self.run_notify([entry("A", "1", [(e, "t", True) for e in range(1, 20)])], roles={"tmdb:1": "111"})
+        self.assertEqual(sender.sent, ["Mari marked 19 episodes as watched across 1 show" + LINK])
+        self.assertEqual(sender.roles, [None])
+
+    def test_dry_run_shows_ping(self):
+        self.seed([entry("Show", "1", [(1, "a", False)])])
+        _, out = self.run_notify([entry("Show", "1", [(1, "a", True)])], dry_run=True, roles={"tmdb:1": "111"})
+        self.assertIn("Mari watched **Show** S01E01 · a <@&111>", out)
+
+
+class LoadRolesTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = Path(self.tmp.name) / "roles.json"
+
+    def load(self, text):
+        self.path.write_text(text)
+        with redirect_stderr(io.StringIO()):
+            return notify.load_roles(self.path)
+
+    def test_valid_map(self):
+        roles = self.load(json.dumps({
+            "guild_id": "9",
+            "shows": {
+                "tmdb:1": {"name": "A", "role_id": "111"},
+                "name:b": {"name": "B", "role_id": "@everyone"},  # not a snowflake
+                "tmdb:3": {"name": "C"},
+            },
+        }))
+        self.assertEqual(roles, {"tmdb:1": "111"})
+
+    def test_missing_or_invalid_means_no_pings(self):
+        self.assertEqual(notify.load_roles(self.path), {})
+        for text in ("{nope", "[]", '{"shows": []}', "\xff"):
+            self.assertEqual(self.load(text), {}, text)
+
 
 class WebhookFileTest(unittest.TestCase):
     def setUp(self):
@@ -250,6 +305,25 @@ class DiscordWebhookTest(unittest.TestCase):
         with redirect_stderr(err):
             self.assertFalse(notify.DiscordWebhook("https://discord.example/api/webhooks/1/secret", opener=opener)("hi"))
         self.assertNotIn("secret", err.getvalue())
+
+    def test_role_ping_allows_only_that_role(self):
+        calls = []
+
+        class Response:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+        def opener(request, timeout):
+            calls.append(json.loads(request.data))
+            return Response()
+
+        self.assertTrue(notify.DiscordWebhook("https://discord.example/h", opener=opener)("hi <@&111>", "111"))
+        self.assertEqual(calls[0]["allowed_mentions"], {"parse": [], "roles": ["111"]})
 
 
 if __name__ == "__main__":

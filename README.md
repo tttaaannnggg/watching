@@ -20,7 +20,8 @@ segment. Tap or hover a segment (or focus the bar and use ←/→) for
 | `notify.py` | Discord messages for newly watched episodes, called by `sync.py`. |
 | `config.json` | What to show. |
 | `deploy/` | systemd user units that run the sync every 30 minutes. |
-| `tests/` | Unit tests for the transform and the notifications. |
+| `hermes-plugin/watch/` | Hermes `/watch` command: per-show Discord role subscriptions. |
+| `tests/` | Unit tests for the transform, the notifications and the plugin. |
 
 ## How sync works
 
@@ -107,6 +108,44 @@ the run logs `notify: no webhook configured, skipping` (with `notify.enabled` fa
 still happens), so nothing is lost once a webhook is added; a backlog larger than
 `bulk_threshold` is then sent as one summary. `--dry-run` sends nothing; combine it with
 `--notify-dry-run` to see the messages.
+
+## Show subscriptions (`/watch`)
+
+Members of the Discord server subscribe to single shows; each subscription is a role, and that
+show's notification pings it (` <@&ROLE_ID>` after the first line, with `allowed_mentions`
+limited to that one role). The bulk summary pings nobody.
+
+```
+/watch                show list, ✅ = you're subscribed
+/watch jojo           subscribe (prefix, substring or close match; case-insensitive)
+/watch off jojo       unsubscribe
+```
+
+The roles live in `$XDG_STATE_HOME/watching/roles.json` (default
+`~/.local/state/watching/roles.json`), written by the plugin and read by `sync.py`:
+
+```json
+{"guild_id": "1565154742836138125",
+ "shows": {"tmdb:45790": {"name": "JoJo's Bizarre Adventure", "role_id": "123…"}}}
+```
+
+Keys are the series keys `sync.py` uses (`tmdb:<id>`, else `name:<casefolded name>`). A missing
+or invalid file just means no pings.
+
+The plugin (`hermes-plugin/watch/`, stdlib only) runs inside the Hermes gateway: any member of
+guild `1565154742836138125` may use it, only ever for their own roles. A show's role is created on
+its first subscription (`📺 <show>`, not hoisted, not mentionable, no permissions) and stays when
+people unsubscribe; a role deleted by hand is recreated. It reads the show list from
+`~/dev/watching/data/progress.json` (plugin setting `progress_path`) and calls Discord REST v10
+with the gateway's `DISCORD_BOT_TOKEN`. The bot needs **Manage Roles** (its role above the `📺`
+roles); without it `/watch` says so.
+
+Install (then restart the gateway):
+
+```sh
+ln -s ~/dev/watching/hermes-plugin/watch ~/.hermes/plugins/watch
+hermes plugins enable watch
+```
 
 ## Install the timer
 

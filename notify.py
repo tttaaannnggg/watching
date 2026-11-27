@@ -2,6 +2,9 @@
 
 The announced-state file (outside the repo) is the source of truth for "already notified":
 an episode is announced at most once, no matter how often it is unmarked and re-marked.
+
+roles.json (next to it, written by the Hermes `/watch` plugin) maps a series key to the Discord
+role of the members subscribed to that show; a show's message pings its role.
 """
 
 import json
@@ -38,9 +41,17 @@ def notify_config(config):
     return {**DEFAULTS, **(config.get("notify") or {})}
 
 
-def state_path():
+def state_dir():
     base = os.environ.get("XDG_STATE_HOME") or "~/.local/state"
-    return Path(base).expanduser() / "watching" / "announced.json"
+    return Path(base).expanduser() / "watching"
+
+
+def state_path():
+    return state_dir() / "announced.json"
+
+
+def roles_path():
+    return state_dir() / "roles.json"
 
 
 def load_webhook(path=WEBHOOK_FILE):
@@ -82,13 +93,38 @@ def save_announced(path, keys):
     os.replace(tmp, path)
 
 
+def load_roles(path):
+    """{series key: role id} from roles.json; {} (no pings) when it is missing or invalid."""
+    try:
+        data = json.loads(Path(path).read_text())
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as exc:
+        warn(f"{path} is unreadable ({type(exc).__name__}), no role pings")
+        return {}
+    shows = data.get("shows") if isinstance(data, dict) else None
+    if not isinstance(shows, dict):
+        warn(f"{path} has no \"shows\" map, no role pings")
+        return {}
+    roles = {}
+    for key, entry in shows.items():
+        role = str(entry.get("role_id", "")) if isinstance(entry, dict) else ""
+        if role.isdigit():  # a snowflake; anything else would inject text into the message
+            roles[key] = role
+    return roles
+
+
 # ---------------------------------------------------------------- episodes
 
 
+def series_key(series):
+    """tmdb id, else the casefolded name. The /watch plugin keys roles.json the same way."""
+    return f"tmdb:{series['tmdb']}" if series.get("tmdb") else f"name:{series['name'].casefold()}"
+
+
 def episode_key(series, ep):
-    show = f"tmdb:{series['tmdb']}" if series.get("tmdb") else f"name:{series['name'].casefold()}"
     number = ep["e"] if ep.get("e") is not None else f"?{ep.get('title', '')}"
-    return f"{show}|{ep['s']}|{number}"
+    return f"{series_key(series)}|{ep['s']}|{number}"
 
 
 def watched_episodes(snapshot):
@@ -140,7 +176,7 @@ def with_link(text):
     return f"{text}\n<{SITE_URL}>"
 
 
-def show_message(series, eps, titles=True):
+def show_message(series, eps, titles=True, role=None):
     name = f"**{md_escape(series['name'])}**"
     if len(eps) == 1:
         ep = eps[0]
@@ -149,6 +185,8 @@ def show_message(series, eps, titles=True):
             text += f" · {md_escape(ep['title'])}"
     else:
         text = f"Mari watched {len(eps)} episodes of {name} ({compact(eps)})"
+    if role:
+        text += f" <@&{role}>"
     return with_link(text)
 
 
@@ -158,8 +196,9 @@ def bulk_message(count, shows):
     )
 
 
-def plan(new, ncfg):
-    """[(content or None, keys)]: one message per show, or a single bulk entry.
+def plan(new, ncfg, roles):
+    """[(content or None, keys, role id or None)]: one message per show (pinging the show's
+    role from `roles`), or a single bulk entry that pings nobody.
     content None means "mark announced without sending"."""
     by_show = {}
     for series, ep, key in new:
@@ -169,16 +208,21 @@ def plan(new, ncfg):
     if len(new) > int(ncfg["bulk_threshold"]):
         keys = [key for _, _, key in new]
         if ncfg["bulk"] == "skip":
-            return [(None, keys)]
-        return [(bulk_message(len(new), len(by_show)), keys)]
-    return [(show_message(s, eps, ncfg["titles"]), keys) for s, eps, keys in by_show.values()]
+            return [(None, keys, None)]
+        return [(bulk_message(len(new), len(by_show)), keys, None)]
+    messages = []
+    for series, eps, keys in by_show.values():
+        role = roles.get(series_key(series))
+        messages.append((show_message(series, eps, ncfg["titles"], role), keys, role))
+    return messages
 
 
 # ---------------------------------------------------------------- run
 
 
-def run(snapshot, config, path, sender, dry_run=False, sleep=time.sleep):
-    """Announce newly watched episodes. `sender(content) -> bool` (None: no webhook).
+def run(snapshot, config, path, sender, dry_run=False, sleep=time.sleep, roles=None):
+    """Announce newly watched episodes. `sender(content, role) -> bool` (None: no webhook);
+    `roles`: {series key: role id} to ping (see load_roles).
     dry_run prints the messages and never changes an existing state file."""
     ncfg = notify_config(config)
     watched = watched_episodes(snapshot)
@@ -207,9 +251,9 @@ def run(snapshot, config, path, sender, dry_run=False, sleep=time.sleep):
         log("nothing new")
         return
 
-    messages = plan(new, ncfg)
+    messages = plan(new, ncfg, roles or {})
     if dry_run:
-        for content, keys in messages:
+        for content, keys, _ in messages:
             if content is None:
                 log(f"would skip {len(keys)} episodes (bulk)")
             else:
@@ -217,13 +261,13 @@ def run(snapshot, config, path, sender, dry_run=False, sleep=time.sleep):
         return
 
     sent = failed = 0
-    for i, (content, keys) in enumerate(messages):
+    for i, (content, keys, role) in enumerate(messages):
         if content is None:
             log(f"{len(keys)} new episodes exceed bulk threshold, marked without sending")
         else:
             if i:
                 sleep(SEND_DELAY)
-            if not sender(content):
+            if not sender(content, role):
                 failed += len(keys)
                 continue
             sent += 1
@@ -243,9 +287,11 @@ class DiscordWebhook:
         self.sleep = sleep
         self.attempts = attempts
 
-    def __call__(self, content):
+    def __call__(self, content, role=None):
+        # Only the show's own role may ping; never @everyone/users, whatever the text contains.
+        mentions = {"parse": [], "roles": [role]} if role else {"parse": []}
         body = json.dumps(
-            {"content": content, "username": "watching", "allowed_mentions": {"parse": []}}
+            {"content": content, "username": "watching", "allowed_mentions": mentions}
         ).encode()
         for _ in range(self.attempts):
             request = urllib.request.Request(

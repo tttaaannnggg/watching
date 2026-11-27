@@ -346,7 +346,14 @@ def main(argv=None):
     if not args.no_notify and (args.notify_dry_run or not args.dry_run):
         webhook = None if args.notify_dry_run else notify.load_webhook()
         sender = notify.DiscordWebhook(webhook) if webhook else None
-        notify.run(snapshot, config, notify.state_path(), sender, dry_run=args.notify_dry_run)
+        notify.run(
+            snapshot,
+            config,
+            notify.state_path(),
+            sender,
+            dry_run=args.notify_dry_run,
+            roles=notify.load_roles(notify.roles_path()),
+        )
     return status
 
 
