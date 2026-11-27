@@ -1,11 +1,13 @@
 """Hermes plugin: /watch — per-show Discord role subscriptions for watching.fujo.dev (zero LLM tokens).
 
-/watch | /watch list    the shows on the page, marking the ones you are subscribed to
+/watch | /watch list    the shows in Mari's Jellyfin library, marking the ones you are subscribed to
 /watch <show>           subscribe: get the show's role, pinged when Mari watches an episode
 /watch off <show>       unsubscribe (the role itself stays)
 
 Each show's role is recorded in $XDG_STATE_HOME/watching/roles.json (default
 ~/.local/state/watching/roles.json); sync.py reads it to ping the role in that show's message.
+The show list is library.json next to it (every series, written by sync.py), falling back to the
+page's progress.json when that is missing or unreadable.
 Any member of the guild may use it, for their own roles only. Discord REST v10 with the bot token
 from DISCORD_BOT_TOKEN, which only ever goes into the Authorization header.
 """
@@ -30,6 +32,7 @@ ROLE_NAME_MAX = 100
 BUDGET = 10.0  # seconds for all Discord calls of one command
 MAX_REPLY = 1900
 MAX_CANDIDATES = 8
+MAX_LISTED = 40  # longer libraries: /watch list shows only your subscriptions plus a count
 UNKNOWN_ROLE = 10011
 NO_PERMISSION = (50001, 50013)  # Missing Access, Missing Permissions
 USAGE = (
@@ -125,9 +128,17 @@ def error_text(exc):
 # ---------------------------------------------------------------- local files
 
 
-def roles_path():
+def state_dir():
     base = os.environ.get("XDG_STATE_HOME") or "~/.local/state"
-    return Path(base).expanduser() / "watching" / "roles.json"
+    return Path(base).expanduser() / "watching"
+
+
+def roles_path():
+    return state_dir() / "roles.json"
+
+
+def library_path():
+    return state_dir() / "library.json"
 
 
 def series_key(series):
@@ -155,13 +166,31 @@ def save_roles(path, data):
     os.replace(tmp, path)
 
 
-def load_shows(path):
-    """[{"key", "name"}] in page order."""
+def load_library(path):
+    """[{"key", "name", "year"}] from sync.py's library.json, by name; None if missing or unusable."""
     try:
         series = json.loads(path.read_text())["series"]
-        return [{"key": series_key(s), "name": s["name"]} for s in series if s.get("name")]
+        shows = [{"key": s["key"], "name": s["name"], "year": s.get("year")} for s in series]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if not all(isinstance(s["key"], str) and s["key"] and isinstance(s["name"], str) and s["name"] for s in shows):
+        return None
+    return shows
+
+
+def load_progress(path):
+    """[{"key", "name", "year"}] in page order."""
+    try:
+        series = json.loads(path.read_text())["series"]
+        return [{"key": series_key(s), "name": s["name"], "year": s.get("year")} for s in series if s.get("name")]
     except (OSError, ValueError, KeyError, TypeError):
         raise Unavailable("Can't read the show list right now.") from None
+
+
+def load_shows(library, progress):
+    """Every show in the library; the shows on the page if library.json is missing or broken."""
+    shows = load_library(library)
+    return shows if shows is not None else load_progress(progress)
 
 
 def role_name(show_name):
@@ -185,17 +214,32 @@ def similarity(query, name):
 
 
 def match(query, shows):
-    """Shows matching `query`: exact, else prefix, else substring, else close (case/punctuation-blind)."""
+    """Shows matching `query`: exact, else prefix, else substring, else close (case/punctuation-blind).
+    "<name> <year>" counts too, to tell remakes apart."""
     q = norm(query)
     if not q:
         return []
-    normed = [(show, norm(show["name"])) for show in shows]
+    normed = [
+        (show, [norm(show["name"])] + ([norm(f"{show['name']} {show['year']}")] if show.get("year") else []))
+        for show in shows
+    ]
     for test in (str.__eq__, str.startswith, lambda name, q: q in name):
-        hits = [show for show, name in normed if test(name, q)]
+        hits = [show for show, names in normed if any(test(name, q) for name in names)]
         if hits:
             return hits
-    scored = sorted(((similarity(q, name), i) for i, (_, name) in enumerate(normed)), reverse=True)
+    scored = sorted(((similarity(q, names[0]), i) for i, (_, names) in enumerate(normed)), reverse=True)
     return [normed[i][0] for score, i in scored if score >= 0.75]
+
+
+def labels(shows):
+    """Display names, with the year added where several shows share a name."""
+    counts = {}
+    for show in shows:
+        counts[show["name"].casefold()] = counts.get(show["name"].casefold(), 0) + 1
+    return [
+        f"{show['name']} ({show['year']})" if show.get("year") and counts[show["name"].casefold()] > 1 else show["name"]
+        for show in shows
+    ]
 
 
 def pick(query, shows):
@@ -205,7 +249,7 @@ def pick(query, shows):
         return hits[0], None
     if not hits:
         return None, f"No show matches “{query}”. /watch lists them."
-    names = [show["name"] for show in hits[:MAX_CANDIDATES]]
+    names = labels(hits[:MAX_CANDIDATES])
     more = f" (+{len(hits) - MAX_CANDIDATES} more)" if len(hits) > MAX_CANDIDATES else ""
     return None, "Which one? " + " · ".join(names) + more
 
@@ -237,9 +281,11 @@ def caller(platform, source):
 
 
 class Watch:
-    def __init__(self, progress_path=DEFAULT_PROGRESS, roles_file=None, client=Discord):
+    def __init__(self, progress_path=DEFAULT_PROGRESS, roles_file=None, library_file=None, client=Discord):
         self.progress_path = Path(progress_path).expanduser()
-        self.roles_file = roles_file  # None: roles_path() per call, honouring XDG_STATE_HOME
+        # None: roles_path() / library_path() per call, honouring XDG_STATE_HOME
+        self.roles_file = roles_file
+        self.library_file = library_file
         self.client = client
 
     def handle(self, raw_args, *, platform="", source=None):
@@ -269,20 +315,34 @@ class Watch:
     def roles_location(self):
         return Path(self.roles_file) if self.roles_file else roles_path()
 
+    def shows(self):
+        library = Path(self.library_file) if self.library_file else library_path()
+        return load_shows(library, self.progress_path)
+
     def list(self, api, user):
-        shows = load_shows(self.progress_path)
+        shows = self.shows()
         roles = load_roles(self.roles_location())["shows"]
         mine = api.member_roles(user)
         subscribed = {key for key, entry in roles.items() if entry.get("role_id") in mine}
-        lines = [f"{'✅' if show['key'] in subscribed else '▫️'} {show['name']}" for show in shows]
-        on_page = {show["key"] for show in shows}
-        lines += [f"✅ {roles[key].get('name') or key}" for key in sorted(subscribed - on_page)]
-        if not lines:
+        listed = {show["key"] for show in shows}
+        gone = [f"✅ {roles[key].get('name') or key}" for key in sorted(subscribed - listed)]
+        if not shows and not gone:
             return "No shows yet."
-        return fit(["Shows (✅ = subscribed; /watch <show> to get pinged, /watch off <show> to stop):", *lines])
+        names = labels(shows)
+        if len(shows) <= MAX_LISTED:
+            lines = [f"{'✅' if show['key'] in subscribed else '▫️'} {name}" for show, name in zip(shows, names)]
+            return fit(["Shows (✅ = subscribed; /watch <show> to get pinged, /watch off <show> to stop):", *lines, *gone])
+        lines = [f"✅ {name}" for show, name in zip(shows, names) if show["key"] in subscribed]
+        others = len(shows) - len(lines)
+        return fit([
+            "Your shows (/watch off <show> to stop):" if lines or gone else "You're not subscribed to any show.",
+            *lines,
+            *gone,
+            f"…and {others} more in the library: /watch <name> to get pinged for one.",
+        ])
 
     def subscribe(self, api, user, query):
-        show, reply = pick(query, load_shows(self.progress_path))
+        show, reply = pick(query, self.shows())
         if show is None:
             return reply
         path = self.roles_location()
@@ -304,10 +364,10 @@ class Watch:
 
     def unsubscribe(self, api, user, query):
         roles = load_roles(self.roles_location())["shows"]
-        shows = load_shows(self.progress_path)
-        on_page = {show["key"] for show in shows}
-        # Also shows that left the page, so their subscriptions can still be dropped.
-        shows += [{"key": key, "name": entry.get("name") or key} for key, entry in roles.items() if key not in on_page]
+        shows = self.shows()
+        listed = {show["key"] for show in shows}
+        # Also shows that left the list, so their subscriptions can still be dropped.
+        shows += [{"key": key, "name": entry.get("name") or key} for key, entry in roles.items() if key not in listed]
         show, reply = pick(query, shows)
         if show is None:
             return reply

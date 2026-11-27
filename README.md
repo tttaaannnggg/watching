@@ -34,6 +34,17 @@ it played (a rewatch). Shows are sorted by most recent activity.
 The file is only rewritten when something other than the `generated` timestamp changed, so the
 timer does not produce empty commits.
 
+Every run except `--dry-run` (also with `--no-notify`, also when the snapshot is unchanged) writes
+the list of **all** series in the library, watched or not, to `$XDG_STATE_HOME/watching/library.json`
+(default `~/.local/state/watching/library.json`) for `/watch`. It stays outside the repo: the full
+library is private. `exclude` applies, `include_inactive` does not. If the file can't be written
+the run logs it and carries on.
+
+```json
+{"generated": "2026-11-26T00:00:00Z",
+ "series": [{"key": "tmdb:76331", "name": "Succession", "year": 2018}]}
+```
+
 ```sh
 python3 sync.py            # update data/progress.json if progress changed
 python3 sync.py --dry-run  # print the snapshot, write nothing
@@ -65,7 +76,8 @@ Keep that file `chmod 600`.
 - `user`: Jellyfin user name whose progress is published.
 - `include_inactive`: also list shows with nothing watched or in progress.
 - `include_specials`: include Season 0 and unnumbered seasons (bonus material).
-- `exclude`: series names to hide (case-insensitive). Hidden shows are never announced either.
+- `exclude`: series names to hide (case-insensitive). Hidden shows are never announced either,
+  and are left out of the `/watch` library list.
 - `notify.enabled`: send Discord messages for newly watched episodes.
 - `notify.titles`: include the episode title in single-episode messages.
 - `notify.bulk_threshold`: more newly watched episodes than this in one run counts as a bulk
@@ -118,6 +130,7 @@ limited to that one role). The bulk summary pings nobody.
 ```
 /watch                show list, ✅ = you're subscribed
 /watch jojo           subscribe (prefix, substring or close match; case-insensitive)
+/watch dune 2021      add the year when several shows share a name
 /watch off jojo       unsubscribe
 ```
 
@@ -129,14 +142,18 @@ The roles live in `$XDG_STATE_HOME/watching/roles.json` (default
  "shows": {"tmdb:45790": {"name": "JoJo's Bizarre Adventure", "role_id": "123…"}}}
 ```
 
-Keys are the series keys `sync.py` uses (`tmdb:<id>`, else `name:<casefolded name>`). A missing
-or invalid file just means no pings.
+Keys are the series keys `sync.py` uses (`tmdb:<id>`, else `name:<casefolded name>`), the same in
+`progress.json`, `library.json` and `roles.json`. A missing or invalid `roles.json` just means no
+pings.
 
 The plugin (`hermes-plugin/watch/`, stdlib only) runs inside the Hermes gateway: any member of
 guild `1565154742836138125` may use it, only ever for their own roles. A show's role is created on
 its first subscription (`📺 <show>`, not hoisted, not mentionable, no permissions) and stays when
-people unsubscribe; a role deleted by hand is recreated. It reads the show list from
-`~/dev/watching/data/progress.json` (plugin setting `progress_path`) and calls Discord REST v10
+people unsubscribe; a role deleted by hand is recreated. Any show in Mari's Jellyfin library can be
+subscribed to, before she starts it: the show list is `library.json` (above). If that is missing or
+unreadable it falls back to the shows on the page, `~/dev/watching/data/progress.json` (plugin
+setting `progress_path`). `/watch list` lists every show; with more than 40 it lists only your
+subscriptions plus how many others there are. It calls Discord REST v10
 with the gateway's `DISCORD_BOT_TOKEN`. The bot needs **Manage Roles** (its role above the `📺`
 roles); without it `/watch` says so.
 

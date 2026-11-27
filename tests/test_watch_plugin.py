@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "hermes-plugin"))
 
 import notify  # noqa: E402
+import sync  # noqa: E402
 import watch  # noqa: E402
 
 GUILD = watch.GUILD_ID
@@ -94,9 +95,13 @@ class WatchTest(unittest.TestCase):
         self.progress = self.dir / "progress.json"
         self.progress.write_text(json.dumps({"series": SHOWS}))
         self.roles_file = self.dir / "state" / "watching" / "roles.json"
+        self.library = self.dir / "state" / "watching" / "library.json"  # absent: progress.json fallback
         self.api = FakeDiscord()
         self.watch = watch.Watch(
-            self.progress, self.roles_file, client=lambda token: watch.Discord(token, opener=self.api)
+            self.progress,
+            self.roles_file,
+            self.library,
+            client=lambda token: watch.Discord(token, opener=self.api),
         )
         env = mock.patch.dict(os.environ, {watch.TOKEN_ENV: TOKEN})
         env.start()
@@ -230,9 +235,72 @@ class WatchTest(unittest.TestCase):
             self.assertEqual(self.roles_file.read_text(), text)
         self.assertEqual(self.api.calls, [])
 
+    def write_library(self, entries):
+        self.library.parent.mkdir(parents=True, exist_ok=True)
+        self.library.write_text(json.dumps({"generated": "2026-11-26T00:00:00Z", "series": entries}))
+
+    def test_library_show_without_activity_can_be_subscribed(self):
+        self.write_library([
+            {"key": "tmdb:45790", "name": "JoJo's Bizarre Adventure", "year": 2012},
+            {"key": "tmdb:76331", "name": "Succession", "year": 2018},
+        ])
+        self.assertEqual(self.run_cmd("succession"), "Subscribed to Succession")
+        self.assertEqual(set(self.roles()["shows"]), {"tmdb:76331"})
+        # The library replaces the page list: shows only on the page are not offered.
+        self.assertIn("No show matches", self.run_cmd("three kingdoms"))
+
+    def test_broken_library_falls_back_to_progress(self):
+        for text in ("{oops", json.dumps({"series": [{"name": "Succession"}]}), json.dumps([])):
+            self.library.parent.mkdir(parents=True, exist_ok=True)
+            self.library.write_text(text)
+            self.assertIn("No show matches", self.run_cmd("succession"))
+            self.assertEqual(self.run_cmd("off three kingdoms"), "You're not subscribed to Romance of the Three Kingdoms")
+
+    def test_same_name_told_apart_by_year(self):
+        self.write_library([
+            {"key": "tmdb:1", "name": "Dune", "year": 1984},
+            {"key": "tmdb:2", "name": "Dune", "year": 2021},
+        ])
+        self.assertEqual(self.run_cmd("dune"), "Which one? Dune (1984) · Dune (2021)")
+        self.assertEqual(self.run_cmd("dune 2021"), "Subscribed to Dune")
+        self.assertEqual(set(self.roles()["shows"]), {"tmdb:2"})
+        self.assertIn("✅ Dune (2021)", self.run_cmd("list").splitlines())
+
+    def test_long_library_list_shows_only_own_subscriptions(self):
+        entries = [{"key": f"tmdb:{i}", "name": f"Show {i:03}", "year": 2000} for i in range(watch.MAX_LISTED + 10)]
+        self.write_library(entries)
+        self.assertEqual(
+            self.run_cmd("list"),
+            f"You're not subscribed to any show.\n…and {len(entries)} more in the library: /watch <name> to get pinged for one.",
+        )
+        self.run_cmd("show 007")
+        self.run_cmd("show 012", user=OTHER)
+        self.assertEqual(
+            self.run_cmd("list").splitlines(),
+            [
+                "Your shows (/watch off <show> to stop):",
+                "✅ Show 007",
+                f"…and {len(entries) - 1} more in the library: /watch <name> to get pinged for one.",
+            ],
+        )
+
     def test_series_key_matches_sync(self):
         for series in SHOWS:
             self.assertEqual(watch.series_key(series), notify.series_key(series))
+        # library.json (sync.build_library) and progress.json (sync.build_series) key a show alike,
+        # and the plugin reads both to the same key notify pings with.
+        jellyfin = [
+            {"Id": "a", "Name": "JoJo's Bizarre Adventure", "ProductionYear": 2012, "ProviderIds": {"Tmdb": "45790"}},
+            {"Id": "b", "Name": "No Tmdb Show", "ProductionYear": None, "ProviderIds": {}},
+        ]
+        eps = [{"SeasonId": "s", "ParentIndexNumber": 1, "IndexNumber": 1, "Name": "x", "UserData": {"Played": True}}]
+        progress = [sync.build_series(s, [{"Id": "s", "IndexNumber": 1}], eps, {}) for s in jellyfin]
+        self.progress.write_text(json.dumps({"series": progress}))
+        self.write_library(sync.build_library(jellyfin, {})["series"])
+        from_library = [s["key"] for s in watch.load_library(self.library)]
+        from_progress = [s["key"] for s in watch.load_progress(self.progress)]
+        self.assertEqual(from_library, from_progress)
+        self.assertEqual(from_library, [notify.series_key(s) for s in progress])
 
     def test_register(self):
         registered = {}

@@ -9,7 +9,9 @@ the repo (default ~/.config/watching/sync.env, override with WATCHING_ENV_FILE):
     JELLYFIN_USER_ID=...                    (optional fallback if the name lookup fails)
 
 Display and notification settings live in config.json next to this script; see notify.py
-for Discord notifications of newly watched episodes.
+for Discord notifications of newly watched episodes. Every run (except --dry-run) also writes
+the list of all series in the library to $XDG_STATE_HOME/watching/library.json, outside the
+repo, for the /watch plugin.
 """
 
 import argparse
@@ -234,17 +236,20 @@ def build_series(series, seasons, episodes, config):
     if not config.get("include_inactive") and watched == 0 and in_progress == 0:
         return None
 
-    tmdb = (series.get("ProviderIds") or {}).get("Tmdb")
     return {
-        "name": name,
-        "year": series.get("ProductionYear"),
-        "tmdb": str(tmdb) if tmdb else None,
+        **series_ref(series),
         "last_activity": last_activity,
         "watched": watched,
         "total": total,
         "current": current_episode(flat),
         "seasons": out_seasons,
     }
+
+
+def series_ref(series):
+    """name/year/tmdb of a Jellyfin series, as they appear in progress.json."""
+    tmdb = (series.get("ProviderIds") or {}).get("Tmdb")
+    return {"name": series.get("Name", ""), "year": series.get("ProductionYear"), "tmdb": str(tmdb) if tmdb else None}
 
 
 def current_episode(flat):
@@ -285,6 +290,34 @@ def build_snapshot(entries, config, generated=None):
     return {"generated": generated or now_utc(), "series": sort_series(result)}
 
 
+def build_library(series_list, config, generated=None):
+    """Every series in the library (minus `exclude`), keyed like notify.series_key, by name."""
+    excluded = {name.casefold() for name in config.get("exclude", [])}
+    result = []
+    for series in series_list:
+        ref = series_ref(series)
+        if not ref["name"] or ref["name"].casefold() in excluded:
+            continue
+        result.append({"key": notify.series_key(ref), "name": ref["name"], "year": ref["year"]})
+    result.sort(key=lambda s: (s["name"].casefold(), s["year"] or 0))
+    return {"generated": generated or now_utc(), "series": result}
+
+
+def write_library(library, path):
+    """Atomically replace `path`; a failure is logged and otherwise ignored."""
+    path = Path(path)
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp.write_text(dump(library))
+        os.replace(tmp, path)
+    except OSError as exc:
+        print(f"sync: could not write {path} ({exc})", file=sys.stderr)
+        return False
+    print(f"sync: wrote {path} ({len(library['series'])} series)")
+    return True
+
+
 def content_changed(old, new):
     """Compare two snapshots ignoring the `generated` timestamp."""
     if old is None:
@@ -300,8 +333,8 @@ def dump(snapshot):
 # ---------------------------------------------------------------- main
 
 
-def fetch_entries(client, uid):
-    for series in client.series(uid):
+def fetch_entries(client, uid, series_list):
+    for series in series_list:
         sid = series["Id"]
         yield series, client.seasons(uid, sid), client.episodes(uid, sid)
 
@@ -333,13 +366,15 @@ def main(argv=None):
     config = load_config()
     client = Jellyfin(settings["JELLYFIN_URL"], settings["JELLYFIN_API_KEY"])
     uid = client.user_id(config["user"], settings.get("JELLYFIN_USER_ID"))
-    snapshot = build_snapshot(fetch_entries(client, uid), config)
+    series_list = client.series(uid)
+    snapshot = build_snapshot(fetch_entries(client, uid, series_list), config)
 
     status = 0
     if args.dry_run:
         sys.stdout.write(dump(snapshot))
     else:
         status = write_snapshot(snapshot, args.push)
+        write_library(build_library(series_list, config), notify.state_dir() / "library.json")
 
     # Independent of whether the file changed or the push worked; --dry-run sends nothing
     # unless --notify-dry-run asks to see the messages.
