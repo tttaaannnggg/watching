@@ -1,0 +1,10 @@
+name: watch
+version: "1.0.0"
+description: "Per-show Discord role subscriptions for watching.fujo.dev: /watch [show | list | off <show>]. Zero LLM tokens."
+author: "Mari (watching)"
+config_schema:
+  progress_path:
+    type: str
+    default: "~/dev/watching/data/progress.json"
+    label: "progress.json"
+    description: "Snapshot written by sync.py; its shows are what /watch can subscribe to"
