@@ -7,4 +7,4 @@ config_schema:
     type: str
     default: "~/dev/watching/data/progress.json"
     label: "progress.json"
-    description: "Snapshot written by sync.py; its shows are what /watch can subscribe to"
+    description: "Snapshot written by sync.py; /watch lists its shows only when $XDG_STATE_HOME/watching/library.json is missing or broken"

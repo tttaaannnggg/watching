@@ -1,6 +1,12 @@
+import contextlib
+import io
+import json
+import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -24,6 +30,10 @@ def episode(sid, s, e, name, played=False, pct=None, ticks=0, last=None):
 
 def series(name, year=2000, tmdb="1"):
     return {"Name": name, "ProductionYear": year, "ProviderIds": {"Tmdb": tmdb} if tmdb else {}}
+
+
+def library_series(name, year=2000, tmdb="1", sid=None):
+    return {"Id": sid or name, **series(name, year, tmdb)}
 
 
 def show(name, last, played=True):
@@ -197,6 +207,100 @@ class ChangeDetectionTest(unittest.TestCase):
 
     def test_missing_previous_file_counts_as_changed(self):
         self.assertTrue(sync.content_changed(None, {"generated": "x", "series": []}))
+
+
+class LibraryTest(unittest.TestCase):
+    def test_all_series_sorted_with_notify_keys(self):
+        library = sync.build_library(
+            [library_series("succession", 2018, "76331"), library_series("Monster", 2004, None)],
+            CONFIG,
+            generated="2026-11-26T00:00:00Z",
+        )
+        self.assertEqual(library, {
+            "generated": "2026-11-26T00:00:00Z",
+            "series": [
+                {"key": "name:monster", "name": "Monster", "year": 2004},
+                {"key": "tmdb:76331", "name": "succession", "year": 2018},
+            ],
+        })
+
+    def test_exclude_applies_and_include_inactive_does_not(self):
+        lib = [library_series("Keep"), library_series("Hide Me", tmdb="2")]
+        for config in ({**CONFIG, "exclude": ["HIDE me"]}, {**CONFIG, "exclude": ["hide me"], "include_inactive": True}):
+            self.assertEqual([s["name"] for s in sync.build_library(lib, config)["series"]], ["Keep"])
+
+    def test_write_is_atomic_and_failure_only_logged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "state" / "library.json"
+            library = sync.build_library([library_series("A")], CONFIG)
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertTrue(sync.write_library(library, path))
+            self.assertEqual(json.loads(path.read_text()), library)
+            self.assertEqual(os.listdir(path.parent), ["library.json"])
+
+            blocker = Path(tmp) / "file"
+            blocker.write_text("")
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                self.assertFalse(sync.write_library(library, blocker / "library.json"))
+            self.assertIn("could not write", err.getvalue())
+
+
+class FakeJellyfin:
+    LIBRARY = [library_series("Watched", tmdb="1"), library_series("Untouched", tmdb="2")]
+
+    def __init__(self, url, key):
+        pass
+
+    def user_id(self, name, fallback=None):
+        return "u"
+
+    def series(self, uid):
+        return self.LIBRARY
+
+    def seasons(self, uid, sid):
+        return [season("s1", 1)]
+
+    def episodes(self, uid, sid):
+        return [episode("s1", 1, 1, "Pilot", played=sid == "Watched", last="2026-11-24T00:00:00Z")]
+
+
+class MainLibraryTest(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.dir = Path(tmp.name)
+        self.library = self.dir / "state" / "watching" / "library.json"
+        for patch in (
+            mock.patch.dict(os.environ, {"XDG_STATE_HOME": str(self.dir / "state")}),
+            mock.patch.object(sync, "load_settings", lambda: {"JELLYFIN_URL": "x", "JELLYFIN_API_KEY": "k"}),
+            mock.patch.object(sync, "load_config", lambda: dict(CONFIG)),
+            mock.patch.object(sync, "Jellyfin", FakeJellyfin),
+            mock.patch.object(sync, "OUTPUT_PATH", self.dir / "data" / "progress.json"),
+            mock.patch.object(sync, "ROOT", self.dir),
+        ):
+            patch.start()
+            self.addCleanup(patch.stop)
+
+    def run_main(self, *argv):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(sync.main(list(argv)), 0)
+        return out.getvalue()
+
+    def test_written_every_run_even_when_progress_unchanged(self):
+        self.run_main("--no-notify")
+        progress = json.loads(sync.OUTPUT_PATH.read_text())
+        self.assertEqual([s["name"] for s in progress["series"]], ["Watched"])
+        self.assertEqual([s["name"] for s in json.loads(self.library.read_text())["series"]], ["Untouched", "Watched"])
+        self.library.unlink()
+        self.assertIn("unchanged", self.run_main("--no-notify"))
+        self.assertTrue(self.library.exists())
+
+    def test_dry_run_writes_nothing(self):
+        self.run_main("--dry-run")
+        self.assertFalse(self.library.exists())
+        self.assertFalse(sync.OUTPUT_PATH.exists())
 
 
 if __name__ == "__main__":
