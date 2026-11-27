@@ -1,1 +1,2 @@
-{"user": "mari", "include_inactive": false, "include_specials": false, "exclude": []}
+{"user": "mari", "include_inactive": false, "include_specials": false, "exclude": [],
+ "notify": {"enabled": true, "titles": true, "bulk_threshold": 15, "bulk": "summary", "mute": []}}

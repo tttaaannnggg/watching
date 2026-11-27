@@ -8,7 +8,8 @@ the repo (default ~/.config/watching/sync.env, override with WATCHING_ENV_FILE):
     JELLYFIN_API_KEY_FILE=/path/to/key      (or JELLYFIN_API_KEY=...)
     JELLYFIN_USER_ID=...                    (optional fallback if the name lookup fails)
 
-Display settings live in config.json next to this script.
+Display and notification settings live in config.json next to this script; see notify.py
+for Discord notifications of newly watched episodes.
 """
 
 import argparse
@@ -21,6 +22,8 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
+
+import notify
 
 ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = ROOT / "config.json"
@@ -317,6 +320,13 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--dry-run", action="store_true", help="print JSON, write nothing")
     parser.add_argument("--push", action="store_true", help="commit and push if changed")
+    parser.add_argument("--no-notify", action="store_true", help="skip Discord notifications")
+    parser.add_argument(
+        "--notify-dry-run",
+        action="store_true",
+        help="print the Discord messages instead of sending them; leaves an existing "
+        "announced state untouched (a missing one is still seeded)",
+    )
     args = parser.parse_args(argv)
 
     settings = load_settings()
@@ -325,10 +335,22 @@ def main(argv=None):
     uid = client.user_id(config["user"], settings.get("JELLYFIN_USER_ID"))
     snapshot = build_snapshot(fetch_entries(client, uid), config)
 
+    status = 0
     if args.dry_run:
         sys.stdout.write(dump(snapshot))
-        return 0
+    else:
+        status = write_snapshot(snapshot, args.push)
 
+    # Independent of whether the file changed or the push worked; --dry-run sends nothing
+    # unless --notify-dry-run asks to see the messages.
+    if not args.no_notify and (args.notify_dry_run or not args.dry_run):
+        webhook = None if args.notify_dry_run else notify.load_webhook()
+        sender = notify.DiscordWebhook(webhook) if webhook else None
+        notify.run(snapshot, config, notify.state_path(), sender, dry_run=args.notify_dry_run)
+    return status
+
+
+def write_snapshot(snapshot, push):
     old = None
     if OUTPUT_PATH.exists():
         try:
@@ -343,8 +365,12 @@ def main(argv=None):
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(dump(snapshot))
     print(f"sync: wrote {OUTPUT_PATH.relative_to(ROOT)} ({count} series)")
-    if args.push:
-        git_push(OUTPUT_PATH)
+    if push:
+        try:
+            git_push(OUTPUT_PATH)
+        except subprocess.CalledProcessError as exc:
+            print(f"sync: git failed ({exc})", file=sys.stderr)
+            return 1
         print("sync: committed and pushed")
     return 0
 
